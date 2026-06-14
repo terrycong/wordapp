@@ -27,6 +27,27 @@
 
 ## 🚀 运行
 
+### 🐳 Docker (推荐)
+
+```bash
+# 拉取或本地构建
+docker build -t ghcr.io/terrycong/wordapp:1.0.0-local .
+
+# 启动 (端口 38087, 数据持久化到 host 目录)
+docker run -d --name wordapp --restart unless-stopped \
+  -p 38087:8080 \
+  -v $PWD/wordapp-data:/app/data \
+  -e TZ=Asia/Shanghai \
+  ghcr.io/terrycong/wordapp:1.0.0-local
+
+# 验证
+curl http://localhost:38087/actuator/health
+```
+
+打开 <http://localhost:38087>，用 `admin / admin123` 登录或注册新账号。
+
+> ⚠️ 容器内运行用户为 `spring` (uid 65532)，挂载目录需要可写权限：`chmod 777 wordapp-data` 或 `chown 65532:65532`。
+
 ### 开发模式 (H2)
 
 ```bash
@@ -101,7 +122,7 @@ python3 scripts/gen_words.py
 
 ## 📋 接下来可以做
 
-- [ ] Docker 化 + GHCR 发布 (沿用 creditapp 套路)
+- [x] ~~Docker 化 + GHCR 发布 (沿用 creditapp 套路)~~ ✅ 完成 v1.0.0
 - [ ] 题目数据接入百度/有道发音 mp3 (替换 Web Speech)
 - [ ] 家长端: 看小孩进度、设置每周复习目标
 - [ ] 学习曲线图 (Chart.js)
