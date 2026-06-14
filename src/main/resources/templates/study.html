@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>学习中 · 单词大冒险</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<main class="container py-4" style="max-width: 720px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-mortarboard"></i> 学习中</h4>
+        <div class="text-muted small">
+            <span id="sessionCorrect">0</span> ✅ /
+            <span id="sessionWrong">0</span> ❌
+        </div>
+    </div>
+
+    <input type="hidden" id="forcedType" th:value="${forcedType}">
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <div id="loading" class="text-center text-muted py-5">
+                <div class="spinner-border text-primary"></div>
+                <div class="mt-2">出题中...</div>
+            </div>
+
+            <div id="quizArea" style="display:none;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="badge text-bg-primary" id="typeBadge">题型</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="speakBtn" title="朗读单词">
+                        <i class="bi bi-volume-up"></i> 朗读
+                    </button>
+                </div>
+                <h5 class="mb-4" id="question">题目</h5>
+
+                <!-- 选择题 -->
+                <div id="choices" class="d-grid gap-2"></div>
+
+                <!-- 拼写题 -->
+                <div id="spellArea" style="display:none;">
+                    <input type="text" id="spellInput" class="form-control form-control-lg"
+                           placeholder="请输入单词" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <div class="text-end mt-3">
+                        <button type="button" class="btn btn-primary" id="spellSubmit">
+                            <i class="bi bi-check"></i> 提交
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultArea" style="display:none;" class="text-center py-3">
+                <div id="resultIcon" class="display-3 mb-2"></div>
+                <h4 id="resultTitle" class="mb-3"></h4>
+                <div class="bg-light p-3 rounded mb-3 text-start">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <span id="resultWord" class="text-primary"></span>
+                            <small class="text-muted ms-2" id="resultPhonetic"></small>
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="resultSpeak">
+                            <i class="bi bi-volume-up"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2 text-secondary" id="resultMeaning"></div>
+                </div>
+                <button type="button" class="btn btn-success btn-lg" id="nextBtn">
+                    下一题 <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <a th:href="@{/}" class="text-muted small">← 回到首页</a>
+    </div>
+</main>
+
+<script>
+const ForcedType = document.getElementById('forcedType').value || null;
+let CurrentQ = null;
+let SessionStats = { correct: 0, wrong: 0 };
+
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 0.9;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = '';
+    document.getElementById('quizArea').style.display = 'none';
+    document.getElementById('resultArea').style.display = 'none';
+}
+
+function loadNext() {
+    showLoading();
+    const url = ForcedType ? `/study/api/next?type=${ForcedType}` : '/study/api/next';
+    fetch(url).then(r => r.json()).then(data => {
+        if (!data.ok) {
+            alert(data.error || '出题失败');
+            window.location.href = '/textbooks';
+            return;
+        }
+        CurrentQ = data;
+        renderQuiz(data);
+    });
+}
+
+function renderQuiz(q) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('quizArea').style.display = '';
+
+    const typeMap = {
+        'CN_TO_EN': '中→英 (选择)',
+        'EN_TO_CN': '英→中 (选择)',
+        'SPELL': '看意思·拼写',
+        'LISTEN_CHOICE': '听音·选意思'
+    };
+    document.getElementById('typeBadge').textContent = typeMap[q.type] || q.type;
+    document.getElementById('question').textContent = q.question;
+
+    const choicesEl = document.getElementById('choices');
+    const spellEl = document.getElementById('spellArea');
+    choicesEl.innerHTML = '';
+
+    if (q.type === 'SPELL') {
+        spellEl.style.display = '';
+        choicesEl.style.display = 'none';
+        const inp = document.getElementById('spellInput');
+        inp.value = '';
+        inp.focus();
+    } else {
+        spellEl.style.display = 'none';
+        choicesEl.style.display = '';
+        (q.options || []).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-primary btn-lg text-start py-3';
+            btn.textContent = opt;
+            btn.addEventListener('click', () => submitAnswer(opt));
+            choicesEl.appendChild(btn);
+        });
+    }
+
+    if (q.type === 'LISTEN_CHOICE') {
+        // 自动朗读一次
+        setTimeout(() => speak(q.spelling), 300);
+    }
+}
+
+function submitAnswer(userAnswer) {
+    const fd = new FormData();
+    fd.append('userAnswer', userAnswer);
+    fetch('/study/api/answer', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) { alert(data.error); loadNext(); return; }
+            showResult(data);
+        });
+}
+
+function showResult(data) {
+    document.getElementById('quizArea').style.display = 'none';
+    document.getElementById('resultArea').style.display = '';
+
+    if (data.correct) {
+        SessionStats.correct++;
+        document.getElementById('resultIcon').textContent = '✅';
+        document.getElementById('resultTitle').textContent = '回答正确';
+        document.getElementById('resultTitle').className = 'mb-3 text-success';
+    } else {
+        SessionStats.wrong++;
+        document.getElementById('resultIcon').textContent = '❌';
+        document.getElementById('resultTitle').textContent = '答错了，下次注意';
+        document.getElementById('resultTitle').className = 'mb-3 text-danger';
+    }
+    document.getElementById('sessionCorrect').textContent = SessionStats.correct;
+    document.getElementById('sessionWrong').textContent = SessionStats.wrong;
+
+    document.getElementById('resultWord').textContent = data.spelling;
+    document.getElementById('resultPhonetic').textContent = data.phonetic || '';
+    document.getElementById('resultMeaning').textContent = data.meaning;
+    speak(data.spelling);
+}
+
+document.getElementById('speakBtn').addEventListener('click', () => {
+    if (CurrentQ) speak(CurrentQ.spelling);
+});
+document.getElementById('resultSpeak').addEventListener('click', () => {
+    const w = document.getElementById('resultWord').textContent;
+    if (w) speak(w);
+});
+document.getElementById('nextBtn').addEventListener('click', loadNext);
+document.getElementById('spellSubmit').addEventListener('click', () => {
+    const v = document.getElementById('spellInput').value;
+    if (!v.trim()) return;
+    submitAnswer(v);
+});
+document.getElementById('spellInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('spellSubmit').click();
+    }
+});
+
+loadNext();
+</script>
+<script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>

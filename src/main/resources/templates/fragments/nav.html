@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<nav th:fragment="nav" class="navbar navbar-expand-md navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}"><i class="bi bi-book-half"></i> 单词大冒险</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navmenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navmenu">
+            <ul class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
+                <li class="nav-item"><a class="nav-link" th:href="@{/}"><i class="bi bi-house"></i> 首页</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/study}"><i class="bi bi-mortarboard"></i> 开始学习</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/textbooks}"><i class="bi bi-journal-bookmark"></i> 课本</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/stats}"><i class="bi bi-bar-chart"></i> 统计</a></li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <span class="navbar-text text-white-50 me-3"><i class="bi bi-person-circle"></i> <span sec:authentication="name">user</span></span>
+                </li>
+                <li class="nav-item" sec:authorize="isAuthenticated()">
+                    <form th:action="@{/logout}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-outline-light btn-sm">退出</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

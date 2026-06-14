@@ -1,0 +1,9 @@
+body {
+    background-color: #f4f6fb;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+.card { border-radius: 10px; }
+.btn-lg.text-start { font-size: 1.05rem; }
+#choices .btn { transition: all .15s ease; }
+#choices .btn:hover { transform: translateY(-1px); }
+.navbar-brand { font-weight: 600; }

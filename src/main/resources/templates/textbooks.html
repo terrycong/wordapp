@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>课本管理 · 单词大冒险</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.3/css/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<main class="container py-4">
+    <h3 class="mb-3"><i class="bi bi-journal-bookmark"></i> 选择课本</h3>
+    <div th:if="${param.empty}" class="alert alert-warning">请先至少选择一本课本，再开始学习。</div>
+    <p class="text-muted">勾选要学习的课本，加入后会立刻把里面的单词并入到你的复习计划。可以同时选多本。</p>
+    <div class="row g-3">
+        <div th:each="t : ${textbooks}" class="col-md-6 col-lg-4">
+            <div class="card h-100" th:classappend="${selected.contains(t.id)} ? 'border-success' : ''">
+                <div class="card-body">
+                    <h6 class="card-title mb-1" th:text="${t.name}">课本</h6>
+                    <small class="text-muted" th:text="${t.publisher}">人教版</small>
+                    <div class="mt-3">
+                        <form th:if="${!selected.contains(t.id)}" th:action="@{/textbooks/add}" method="post" class="d-inline">
+                            <input type="hidden" name="textbookId" th:value="${t.id}">
+                            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-plus-circle"></i> 加入</button>
+                        </form>
+                        <form th:if="${selected.contains(t.id)}" th:action="@{/textbooks/remove}" method="post" class="d-inline">
+                            <input type="hidden" name="textbookId" th:value="${t.id}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('移除这本课本会保留已学习记录，但不再出新词。确定？')">
+                                <i class="bi bi-dash-circle"></i> 已加入·移除
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<script th:src="@{/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
